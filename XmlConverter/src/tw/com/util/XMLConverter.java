@@ -41,7 +41,7 @@ public class XMLConverter {
 		getJson(xml);
 	}
 
-	public static List<Map<String, String>> getConverterConfigList() throws Exception {
+	private static List<Map<String, String>> getConverterConfigList() throws Exception {
 		System.out.println();
 		List<Map<String, String>> list = new ArrayList<Map<String, String>>();
 		Map<String, String> map = null;
@@ -92,7 +92,7 @@ public class XMLConverter {
 		return list;
 	}
 
-	public static Map<String, String> getTemplateConfigMap() throws Exception {
+	private static Map<String, String> getTemplateConfigMap() throws Exception {
 		System.out.println();
 		Map<String, String> map = new HashMap<String, String>();
 
