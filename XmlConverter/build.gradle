@@ -1,0 +1,21 @@
+apply plugin: 'java'
+apply plugin: 'war'
+apply plugin: 'eclipse-wtp'
+
+repositories {
+    mavenCentral()
+}
+
+webAppDirName = 'WebContent'    // 設置 WebApp 根目錄
+sourceSets.main.java.srcDir 'src'   // 設置 Java 源碼所在目錄
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+
+dependencies {
+	compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.9.0'
+	compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.9.0'
+	compile group: 'com.thoughtworks.xstream', name: 'xstream', version: '1.4.2'
+	compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.8.3'
+	compile group: 'cglib', name: 'cglib-nodep', version: '2.2'
+	compile group: 'com.google.code.gson', name: 'gson', version: '2.3.1'
+}

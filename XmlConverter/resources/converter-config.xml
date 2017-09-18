@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+	<fieldName>
+		<source>Carrier</source>
+		<destination>sender</destination>
+		<description>寄送者</description>
+		<isAttribute>false</isAttribute>
+	</fieldName>
+	<fieldName>
+		<source>CarrierProduct</source>
+		<destination>product</destination>
+		<description>產品</description>
+		<isAttribute>false</isAttribute>
+	</fieldName>
+	<fieldName>
+		<source>service</source>
+		<destination>Request.service</destination>
+		<description>服務</description>
+		<isAttribute>true</isAttribute>
+	</fieldName>
+	<fieldName>
+		<source>lang</source>
+		<destination>Request.lang</destination>
+		<description>語言</description>
+		<isAttribute>true</isAttribute>
+	</fieldName>
+</config>
