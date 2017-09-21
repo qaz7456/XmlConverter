@@ -1,5 +1,6 @@
 package tw.com.util;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -11,13 +12,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.bind.JAXB;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
+import org.json.XML;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -26,19 +33,14 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.google.gson.Gson;
-
-import tw.com.bean.Body;
-import tw.com.bean.Request;
-import tw.com.bean.Response;
-
 public class XMLConverter {
 	private static final Logger logger = LogManager.getLogger(XMLConverter.class);
 
 	public static void main(String[] args) throws Exception {
 		String xml = "<Request service=\"SALE_ORDER_STATUS_PUSH_SERVICE\" lang=\"zh-CN\"><Body><SaleOrderStatusRequest><CompanyCode>W8860571504</CompanyCode><SaleOrders><SaleOrder><WarehouseCode>886DCA</WarehouseCode><ErpOrder>20170803TW1</ErpOrder><WayBillNo>289081343391</WayBillNo><ShipmentId>OXMS201708030114140703</ShipmentId><Waves>EW886A17080300102</Waves><CartNum>1</CartNum><GridNum>0001</GridNum><Carrier>顺丰速运</Carrier><CarrierProduct>島内件(80CM0.5-1.5KG)</CarrierProduct><IsSplit>N</IsSplit><Steps><Step><EventTime>2017-08-0315:31:25</EventTime><EventAddress>WOM</EventAddress><Status>1400</Status><Note>您的订单已取消,取消原因：客户要求取消订单</Note></Step></Steps></SaleOrder></SaleOrders></SaleOrderStatusRequest></Body></Request>";
-		String temple = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response service=\"\" lang=\"\"><Body><sender/><product/></Body></Response>";
-		getJson(xml);
+		String json = "{\"Request\":{\"_lang\":\"zh-CN\",\"_service\":\"SALE_ORDER_STATUS_PUSH_SERVICE\",\"Body\":{\"SaleOrderStatusRequest\":{\"SaleOrders\":{\"SaleOrder\":{\"ShipmentId\":\"OXMS201708030114140703\",\"Sender\":\"顺丰速运\",\"Steps\":{\"Step\":{\"Status\":1400,\"EventTime\":\"2017-08-0315:31:25\",\"Note\":\"您的订单已取消,取消原因：客户要求取消订单\",\"EventAddress\":\"WOM\"}},\"ErpNo\":\"20170803TW1\",\"CartNum\":1,\"WayBillNo\":289081343391,\"GridNum\":\"0001\",\"Product\":\"島内件(80CM0.5-1.5KG)\",\"IsSplit\":\"N\",\"WarehouseCode\":\"886DCA\",\"Waves\":\"EW886A17080300102\"}},\"Code\":\"W8860571504\"}}}}";
+		logger.debug(getJson(xml));
+		logger.debug(getXml(json));
 	}
 
 	private static List<Map<String, String>> getConverterConfigList() throws Exception {
@@ -54,11 +56,7 @@ public class XMLConverter {
 			logger.error(e);
 		}
 		InputStream is = null;
-		try {
-			is = new FileInputStream("resources/converter-config.xml");
-		} catch (FileNotFoundException e) {
-			logger.error(e);
-		}
+		is = XMLConverter.class.getResourceAsStream("/resources/converter-config.xml");
 		Document doc = null;
 		try {
 			doc = dombuilder.parse(is);
@@ -92,409 +90,188 @@ public class XMLConverter {
 		return list;
 	}
 
-	private static Map<String, String> getTemplateConfigMap() throws Exception {
-		System.out.println();
-		Map<String, String> map = new HashMap<String, String>();
-
-		DocumentBuilderFactory domfac = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dombuilder = null;
-		try {
-			dombuilder = domfac.newDocumentBuilder();
-		} catch (ParserConfigurationException e) {
-			logger.error(e);
+	public static String getXml(String input) throws Exception {
+		String xml = "";
+		List<String> list = null;
+		if (Character.isJSONValid(input)) {
+			JSONObject json = new JSONObject(input);
+			xml = XML.toString(json);
+			list = new ArrayList<String>();
 		}
+		if (Character.isXMLLike(input)) {
+			xml = input;
 
-		FileInputStream is = null;
-
-		try {
-			is = new FileInputStream("resources/template-config.xml");
-		} catch (Exception e) {
 		}
-		Document doc = null;
-		try {
-			doc = dombuilder.parse(is);
-		} catch (SAXException | IOException e) {
-			logger.error(e);
-		}
+		if (!"".equals(xml)) {
+			List<Map<String, String>> converterConfigList = getConverterConfigList();
 
-		NodeList all_nodeList = doc.getElementsByTagName("*");
+			Document doc = getDocument(xml);
 
-		for (int i = 0; i < all_nodeList.getLength(); i++) {
+			NodeList all_nodeList = doc.getElementsByTagName("*");
 
-			Element element = (Element) all_nodeList.item(i);
+			for (int i = 0; i < all_nodeList.getLength(); i++) {
 
-			if (element.getNodeType() == Node.ELEMENT_NODE) {
-
+				Element element = (Element) all_nodeList.item(i);
 				String nodeName = element.getNodeName();
 
-				map.put(nodeName, null);
+				if (Character.isJSONValid(input)) {
+					if ("_".equals(nodeName.substring(0, 1))) {
 
-				if (i == 0)
-					map.put("XmlType", element.getNodeName());
+						((Element) element.getParentNode()).setAttribute(nodeName.substring(1, nodeName.length()),
+								element.getTextContent());
 
-				NodeList nodeList = element.getChildNodes();
+						list.add(nodeName);
+					}
+				}
 
-				for (int j = 0; j < nodeList.getLength(); j++) {
-					Node node = (Node) nodeList.item(j);
-					if (node.getNodeType() == Node.TEXT_NODE) {
-						String text = node.getTextContent();
-						text = Character.null2str(text);
-						text = text.equals("") ? null : text;
-						map.put(nodeName, text);
+				for (int j = 0; j < converterConfigList.size(); j++) {
+
+					Map<String, String> map = converterConfigList.get(j);
+
+					if (!"true".equals(map.get("isAttribute"))) {
+						if (map.get("source").equals(nodeName)) {
+
+							NodeList nodeList = doc.getElementsByTagName(nodeName);
+							for (int k = 0; k < nodeList.getLength();) {
+								doc.renameNode(nodeList.item(k), "", map.get("destination"));
+							}
+						}
+					} else {
+						NamedNodeMap namedNodeMap = element.getAttributes();
+						for (int l = 0; l < namedNodeMap.getLength(); ++l) {
+							Node attr = namedNodeMap.item(l);
+							String attrName = attr.getNodeName();
+							String attrVal = attr.getNodeValue();
+
+							if (map.get("source").equals(attrName)) {
+								element.removeAttribute(attrName);
+								element.setAttribute(map.get("destination"), attrVal);
+							}
+						}
 					}
 				}
 			}
+			if (Character.isJSONValid(input)) {
+				Element root = doc.getDocumentElement();
+				for (int i = 0; i < list.size(); i++) {
+
+					root.getElementsByTagName(list.get(i)).item(0).getParentNode()
+							.removeChild(root.getElementsByTagName(list.get(i)).item(0));
+				}
+			}
+			xml = docToString(doc);
+
 		}
-		logger.debug("getTemplateConfigMap");
-		for (String key : map.keySet()) {
-			logger.debug("{}: {}", key, map.get(key));
-		}
-		return map;
+		return xml;
 	}
 
-	/*
-	 * @param xml The xml document to be convertedd.
-	 * 
-	 * @return 主鍵為xml節點，值為節點其值的Map.
-	 * 
-	 */
-	public static Map<String, String> XML2Map(String xml) throws Exception {
-		System.out.println();
-		Map<String, String> map = new HashMap<String, String>();
+	public static String getJson(String input) throws Exception {
 
-		DocumentBuilderFactory domfac = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dombuilder = null;
-		try {
-			dombuilder = domfac.newDocumentBuilder();
-		} catch (ParserConfigurationException e) {
-			logger.error(e);
+		String xml = "";
+		if (Character.isJSONValid(input)) {
+			xml = getXml(input);
+		} else if (Character.isXMLLike(input)) {
+			xml = input;
 		}
+		if (!"".equals(xml)) {
 
-		InputSource is = null;
+			List<Map<String, String>> converterConfigList = getConverterConfigList();
 
-		try {
-			is = new InputSource(new StringReader(xml));
-		} catch (Exception e) {
-		}
-		Document doc = null;
-		try {
-			doc = dombuilder.parse(is);
-		} catch (SAXException | IOException e) {
-			logger.error(e);
-		}
+			Document doc = getDocument(xml);
 
-		NodeList all_nodeList = doc.getElementsByTagName("*");
+			NodeList all_nodeList = doc.getElementsByTagName("*");
 
-		for (int i = 0; i < all_nodeList.getLength(); i++) {
+			for (int i = 0; i < all_nodeList.getLength(); i++) {
 
-			Element element = (Element) all_nodeList.item(i);
-
-			if (element.getNodeType() == Node.ELEMENT_NODE) {
-
+				Element element = (Element) all_nodeList.item(i);
 				String nodeName = element.getNodeName();
 
-				map.put(nodeName, null);
+				for (int j = 0; j < converterConfigList.size(); j++) {
 
-				if (i == 0)
-					map.put("XmlType", element.getNodeName());
+					Map<String, String> map = converterConfigList.get(j);
 
-				NodeList nodeList = element.getChildNodes();
+					if (!"true".equals(map.get("isAttribute"))) {
+						if (map.get("source").equals(nodeName)) {
 
-				for (int j = 0; j < nodeList.getLength(); j++) {
-					Node node = (Node) nodeList.item(j);
-					if (node.getNodeType() == Node.TEXT_NODE) {
-						String text = node.getTextContent();
-						map.put(nodeName, text);
+							NodeList nodeList = doc.getElementsByTagName(nodeName);
+							for (int k = 0; k < nodeList.getLength();) {
+								doc.renameNode(nodeList.item(k), "", map.get("destination"));
+							}
+						}
+					} else {
+						NamedNodeMap namedNodeMap = element.getAttributes();
+						for (int l = 0; l < namedNodeMap.getLength(); ++l) {
+							Node attr = namedNodeMap.item(l);
+							String attrName = attr.getNodeName();
+							String attrVal = attr.getNodeValue();
+
+							if (map.get("source").equals(attrName)) {
+								element.removeAttribute(attrName);
+								element.setAttribute(map.get("destination"), attrVal);
+							}
+						}
 					}
 				}
 			}
-		}
-		logger.debug("XML2Map");
-		for (String key : map.keySet()) {
-			logger.debug("{}: {}", key, map.get(key));
-		}
-		return map;
+			for (int i = 0; i < all_nodeList.getLength(); i++) {
 
-	}
+				Element element = (Element) all_nodeList.item(i);
 
-	/*
-	 * @param xml The xml document to be convertedd.
-	 * 
-	 * @return 主鍵為xml節點，值為節點其多屬性值的List<map> .
-	 * 
-	 */
-	public static Map<String, List<Map<String, String>>> XML2AttrMap(String xml) throws Exception {
-		System.out.println();
-		Map<String, List<Map<String, String>>> map = new HashMap<String, List<Map<String, String>>>();
-
-		DocumentBuilderFactory domfac = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dombuilder = null;
-		try {
-			dombuilder = domfac.newDocumentBuilder();
-		} catch (ParserConfigurationException e) {
-			logger.error(e);
-		}
-
-		InputSource is = null;
-
-		try {
-			is = new InputSource(new StringReader(xml));
-		} catch (Exception e) {
-		}
-		Document doc = null;
-		try {
-			doc = dombuilder.parse(is);
-		} catch (SAXException | IOException e) {
-			logger.error(e);
-		}
-
-		NodeList all_nodeList = doc.getElementsByTagName("*");
-
-		for (int i = 0; i < all_nodeList.getLength(); i++) {
-
-			Element element = (Element) all_nodeList.item(i);
-			if (element.getNodeType() == Node.ELEMENT_NODE) {
-
-				String nodeName = element.getNodeName();
-
-				map.put(nodeName, null);
-
-				NamedNodeMap element_attr = element.getAttributes();
-
-				List<Map<String, String>> attrList = new ArrayList<Map<String, String>>();
-
-				for (int j = 0; j < element_attr.getLength(); ++j) {
-					Node attr = element_attr.item(j);
+				NamedNodeMap namedNodeMap = element.getAttributes();
+				for (int l = 0; l < namedNodeMap.getLength(); ++l) {
+					Node attr = namedNodeMap.item(l);
 					String attrName = attr.getNodeName();
 					String attrVal = attr.getNodeValue();
 
-					Map<String, String> attrMap = new HashMap<String, String>();
-					attrMap.put(attrName, attrVal);
-					attrList.add(attrMap);
+					element.removeAttribute(attrName);
+					element.setAttribute("_" + attrName, attrVal);
+
 				}
-				map.put(nodeName, attrList);
-
 			}
+			xml = XML.toJSONObject(docToString(doc)).toString();
 		}
-
-		logger.debug("XML2AttrMap");
-		for (String key : map.keySet()) {
-			logger.debug("{}: {}", key, map.get(key));
-		}
-		return map;
-
+		return xml;
 	}
 
-	public static String getXml(String xml) throws Exception {
-		List<Map<String, String>> converterConfigList = getConverterConfigList();
-		Map<String, String> templateConfigMap = getTemplateConfigMap();
-		Map<String, String> nodeMap = XML2Map(xml);
-		Map<String, List<Map<String, String>>> attrMap = XML2AttrMap(xml);
+	public static Document getDocument(String xml) throws Exception {
 
-		for (int i = 0; i < converterConfigList.size(); i++) {
-			Map<String, String> configMap = converterConfigList.get(i);
-
-			String source = configMap.get("source");
-			String destination = configMap.get("destination");
-
-			for (String template : templateConfigMap.keySet()) {
-				if (destination.equals(template)) {
-					templateConfigMap.put(template, source);
-				}
-			}
-		}
-		for (String node : nodeMap.keySet()) {
-			for (String template : templateConfigMap.keySet()) {
-				if (node.equals(templateConfigMap.get(template))) {
-					templateConfigMap.put(template, nodeMap.get(node));
-				}
-			}
+		DocumentBuilderFactory domfac = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dombuilder = null;
+		try {
+			dombuilder = domfac.newDocumentBuilder();
+		} catch (ParserConfigurationException e) {
+			logger.error(e);
 		}
 
-		StringWriter sw = new StringWriter();
+		InputSource is = null;
 
-		String type = nodeMap.get("XmlType");
-
-		Body body = new Body();
-		body.setProduct(templateConfigMap.get("product"));
-		body.setSender(templateConfigMap.get("sender"));
-
-		Request request = new Request();
-		Response response = new Response();
-
-		for (int i = 0; i < converterConfigList.size(); i++) {
-			Map<String, String> configMap = converterConfigList.get(i);
-			String destination = configMap.get("destination");
-			String isAttribute = configMap.get("isAttribute");
-
-			if ("true".equals(isAttribute)) {
-
-				String[] attrArr = destination.split("\\.");
-				if (attrArr.length == 2) {
-					String attrType = attrArr[0];
-					String attrName = attrArr[1];
-
-					if (type.equals(attrType)) {
-						List<Map<String, String>> list = null;
-						switch (type) {
-						case "Request":
-							list = attrMap.get(type);
-							for (int j = 0; j < list.size(); j++) {
-
-								if ("lang".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-									if (map.get(attrName) != null)
-										request.setLang(map.get(attrName));
-								}
-								if ("service".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-									if (map.get(attrName) != null)
-										request.setService(map.get(attrName));
-								}
-							}
-							request.setBody(body);
-							break;
-						case "Response":
-							list = attrMap.get(type);
-							for (int j = 0; j < list.size(); j++) {
-								if ("lang".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-
-									response.setLang(map.get(attrName));
-								}
-								if ("service".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-
-									response.setService(map.get(attrName));
-								}
-							}
-							response.setBody(body);
-							break;
-						}
-					}
-				}
-			}
+		try {
+			is = new InputSource(new StringReader(xml));
+		} catch (Exception e) {
 		}
-		switch (type) {
-		case "Request":
-			JAXB.marshal(request, sw);
-			break;
-		case "Response":
-			JAXB.marshal(response, sw);
-			break;
+		Document doc = null;
+		try {
+			doc = dombuilder.parse(is);
+		} catch (SAXException | IOException e) {
+			logger.error(e);
 		}
-		logger.debug(sw.toString());
-		return sw.toString();
+		return doc;
 	}
-	public static String getJson(String xml) throws Exception {
-		List<Map<String, String>> converterConfigList = getConverterConfigList();
-		Map<String, String> templateConfigMap = getTemplateConfigMap();
-		Map<String, String> nodeMap = XML2Map(xml);
-		Map<String, List<Map<String, String>>> attrMap = XML2AttrMap(xml);
 
-		for (int i = 0; i < converterConfigList.size(); i++) {
-			Map<String, String> configMap = converterConfigList.get(i);
+	public static String docToString(Document doc) {
+		try {
+			StringWriter sw = new StringWriter();
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer = tf.newTransformer();
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+			transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
 
-			String source = configMap.get("source");
-			String destination = configMap.get("destination");
-
-			for (String template : templateConfigMap.keySet()) {
-				if (destination.equals(template)) {
-					templateConfigMap.put(template, source);
-				}
-			}
+			transformer.transform(new DOMSource(doc), new StreamResult(sw));
+			return sw.toString();
+		} catch (Exception ex) {
+			throw new RuntimeException("Error converting to String", ex);
 		}
-		for (String node : nodeMap.keySet()) {
-			for (String template : templateConfigMap.keySet()) {
-				if (node.equals(templateConfigMap.get(template))) {
-					templateConfigMap.put(template, nodeMap.get(node));
-				}
-			}
-		}
-
-		String json = null;
-
-		String type = nodeMap.get("XmlType");
-
-		Body body = new Body();
-		body.setProduct(templateConfigMap.get("product"));
-		body.setSender(templateConfigMap.get("sender"));
-
-		Request request = new Request();
-		Response response = new Response();
-
-		for (int i = 0; i < converterConfigList.size(); i++) {
-			Map<String, String> configMap = converterConfigList.get(i);
-			String destination = configMap.get("destination");
-			String isAttribute = configMap.get("isAttribute");
-
-			if ("true".equals(isAttribute)) {
-
-				String[] attrArr = destination.split("\\.");
-				if (attrArr.length == 2) {
-					String attrType = attrArr[0];
-					String attrName = attrArr[1];
-
-					if (type.equals(attrType)) {
-						List<Map<String, String>> list = null;
-						switch (type) {
-						case "Request":
-							list = attrMap.get(type);
-							for (int j = 0; j < list.size(); j++) {
-
-								if ("lang".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-									if (map.get(attrName) != null)
-										request.setLang(map.get(attrName));
-								}
-								if ("service".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-									if (map.get(attrName) != null)
-										request.setService(map.get(attrName));
-								}
-							}
-							request.setBody(body);
-							break;
-						case "Response":
-							list = attrMap.get(type);
-							for (int j = 0; j < list.size(); j++) {
-								if ("lang".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-
-									response.setLang(map.get(attrName));
-								}
-								if ("service".equals(attrName)) {
-
-									Map<String, String> map = list.get(j);
-
-									response.setService(map.get(attrName));
-								}
-							}
-							response.setBody(body);
-							break;
-						}
-					}
-				}
-			}
-		}
-		switch (type) {
-		case "Request":
-			json = new Gson().toJson(request);
-			json ="{\"request\":"+json+"}";
-			break;
-		case "Response":
-			json = new Gson().toJson(response);
-			json ="{\"response\":"+json+"}";
-			break;
-		}
-		logger.debug(json);
-		return json;
 	}
 }
