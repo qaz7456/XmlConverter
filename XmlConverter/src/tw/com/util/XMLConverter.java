@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -51,7 +52,7 @@ public class XMLConverter {
 		// Status=\"ok\"><Product><ProductId>p09498618</ProductId><ProductStatus>Online</ProductStatus><ProductName>清涼櫻花剉冰111</ProductName><ShortDescription>白玉櫻花剉冰~清涼退火又消暑</ShortDescription><spec
 		// Id=\"1\"><SpecDescription>-</SpecDescription><CustomizedProductId/><CurrentStock>300</CurrentStock><Stock>1</Stock></spec><ImageMain>https://b-iu101.ac.tw1.yahoo.com/pimg1/c0/05/p09498618-itema-1991xf1x0300x0183-s.jpg</ImageMain><MarketPrice>0</MarketPrice><SalePrice>200</SalePrice><CostPrice>100</CostPrice></Product></Response>";
 		String xmlConverterPath = "C:\\Users\\Ian\\Desktop\\Development\\xmlconverter-config.xml";
-		xml="<?xml version=\"1.0\" encoding=\"gbk\" standalone=\"no\"?><Request lang=\"zh-CN\" service=\"SALE_ORDER_STATUS_PUSH_SERVICE\"><Body><SaleOrderStatusRequest><CompanyCode>W8860571504</CompanyCode><SaleOrders><SaleOrder><WarehouseCode>886DCA</WarehouseCode><ErpOrder>20170803TW1</ErpOrder><WayBillNo>289081343391</WayBillNo><ShipmentId>OXMS201708030114140703</ShipmentId><Waves>EW886A17080300102</Waves><CartNum>1</CartNum><GridNum>0001</GridNum><Carrier>顺丰速运</Carrier><CarrierProduct>島内件(80CM 0.5-1.5KG)</CarrierProduct><IsSplit>N</IsSplit><Steps><Step><EventTime>2017-08-03 15:31:25</EventTime><EventAddress>WOM</EventAddress><Status>1400</Status><Note>您的订单已取消,取消原因：客户要求取消订单</Note></Step></Steps></SaleOrder></SaleOrders></SaleOrderStatusRequest></Body></Request>";
+		xml="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><Request lang=\"zh-CN\" service=\"SALE_ORDER_STATUS_PUSH_SERVICE\"><Body><SaleOrderStatusRequest><CompanyCode>W8860571504</CompanyCode><SaleOrders><SaleOrder><WarehouseCode>886DCA</WarehouseCode><ErpOrder>20170803TW1</ErpOrder><WayBillNo>289081343391</WayBillNo><ShipmentId>OXMS201708030114140703</ShipmentId><Waves>EW886A17080300102</Waves><CartNum>1</CartNum><GridNum>0001</GridNum><Carrier>顺丰速运</Carrier><CarrierProduct>島内件(80CM 0.5-1.5KG)</CarrierProduct><IsSplit>N</IsSplit><Steps><Step><EventTime>2017-08-03 15:31:25</EventTime><EventAddress>WOM</EventAddress><Status>1400</Status><Note>您的订单已取消,取消原因：客户要求取消订单</Note></Step></Steps></SaleOrder></SaleOrders></SaleOrderStatusRequest></Body></Request>";
 		// logger.debug(getJson(xml));
 		// logger.debug(getXml(xml,xmlConverterPath));
 		// logger.debug(getRest(xml, xmlConverterPath));
@@ -154,7 +155,9 @@ public class XMLConverter {
 		String xml = getXml(input, path);
 		logger.debug("轉換後的XML: " + xml);
 		logger.debug("去除空白: " + trim(xml));
+		xml=trim(xml);
 		Map<String, String> map = getXmlMap(xml);
+		
 		StringBuffer sf = new StringBuffer();
 		sf.append("Format=").append(type).append("&");
 		for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -168,13 +171,13 @@ public class XMLConverter {
 	}
 
 	public static Map<String, String> getXmlMap(String xml) throws Exception {
+		
+		InputStream is = new ByteArrayInputStream(xml.getBytes("UTF-8"));
 
-		InputStream is = new ByteArrayInputStream(xml.getBytes());
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware(true);
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		Document document = db.parse(is);
-
 		return createMap(document);
 
 	}
@@ -182,14 +185,17 @@ public class XMLConverter {
 	public static Map<String, String> createMap(Node node) {
 		Map<String, String> map = new HashMap<String, String>();
 		NodeList nodeList = node.getChildNodes();
+		
 		for (int i = 0; i < nodeList.getLength(); i++) {
 			Node currentNode = nodeList.item(i);
 			if (currentNode.hasAttributes()) {
 				for (int j = 0; j < currentNode.getAttributes().getLength(); j++) {
 					Node item = currentNode.getAttributes().item(j);
 					map.put(item.getNodeName(), item.getTextContent());
+					
 				}
 			}
+			
 			if (node.getFirstChild() != null && node.getFirstChild().getNodeType() == Node.ELEMENT_NODE) {
 				map.putAll(createMap(currentNode));
 			} else if (node.getFirstChild().getNodeType() == Node.TEXT_NODE) {
